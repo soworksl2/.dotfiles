@@ -1,4 +1,4 @@
-PS1="\n[\w]\n*-->$ "
+PS1="\n[\w]\n[\u]--> "
 
 
 alias ls='ls --color'
