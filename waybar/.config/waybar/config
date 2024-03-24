@@ -1,0 +1,21 @@
+{
+    "spacing": 5,
+    "modules-center": ["clock"],
+    "modules-right": ["custom/my_rmd", "pulseaudio"],
+
+    "clock": {
+        "format": "{:%I:%M %p}"
+    },
+
+    "custom/my_rmd": {
+        "exec": "~/.config/waybar/scripts/my_rmd.sh",
+        "interval": "once"
+    },
+
+    "pulseaudio": {
+        "format": "vol: {volume}%",
+        "format-bluetooth": "vol: {volume}% b",
+        "format-muted": "vol: {volume}% m",
+        "scroll-step": 1
+    }
+}
