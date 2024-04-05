@@ -1,0 +1,184 @@
+#!/bin/bash
+
+#this script is a wrapper to some xdg-trash implementation adding autocleaning capabilities
+#and others stuff.
+
+#it is recommended to use an alias, for example "del" in your bashrc to use this script.
+
+
+#this function is used to trash the files passed as positional arguments.
+#this is to be implementation agnostic. right now it use trash-put from trash-cli
+#if you want to use another implementation just change this function.
+function sow_trash {
+    trash-put $@
+}
+TRASH_IMPLEMENTATION=trash-cli #the trash implementation tool that sow_trash is using
+
+
+#*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+# CONFIGURATION
+#*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+
+#the configuration variables are
+#
+#UNDELETABLES array of files or directories that cannot be deleted easily. If directory, do not put a trailing slash.
+#LIMIT_FILE_SIZE the max size per file that the trash can handle, if the file is to big may be rm interactively
+#LIMIT_TRASH the total max size that the trash can handle before triying to clean itself
+#LIMIT_TIME the total of day that a file or dir can be in trash before being cleaned
+#
+#NOTE: this scripts do not check or assign any default to any configuration variable
+#if they are bad assigned it is undefined behaviour
+
+
+UNDELETABLES=(
+    "$HOME/Downloads"
+    "$HOME/Documents"
+    "$HOME/images"
+    "$HOME/videos"
+    "$HOME/dev"
+    "$HOME/user_scripts"
+)
+
+LIMIT_FILE_SIZE=1073741824
+LIMIT_TRASH=2147483648
+LIMIT_TIME=20
+
+#*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+
+
+#*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+# MAIN
+#*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
+
+function echo_usage {
+    echo -e "sow-autotrash [OPTIONS]... [FILES]...\n"
+    echo -e "OPTIONS:"
+    echo -e " -h\tshow a help message"
+    echo -e " -p\tuse color to pretty-print warning and other stuffs"
+    echo -e " -f\tforce the deletion of undeletables"
+    echo -e " -s\tdo not print anything, just do your work and return"
+    echo -e " -a\tdelete atomically, means if there are an undeletable and is not force, cancel everithing"
+    echo -e " -c\tonly clean the trash and nothing more"
+    echo -e " -d\tonly delete the files and do not clean the trash"
+
+    echo -e "\nsow-autotrash is using [$TRASH_IMPLEMENTATION] to trash the files if yo want to pass options to it make it as a non-option argument. example after --."
+}
+
+function echon {
+    return 0
+}
+
+function echow {
+    echo -e '\033[0;33m' $@ "\033[0m"
+}
+
+function is_undeletable {
+    for undeletable in ${UNDELETABLES[@]}; do
+        [ "$(realpath $1)" = "$undeletable" ] && return 0
+    done
+    return 1
+}
+
+#parameters are:
+#$1 -> t or f indicating if should be atomic if something else f will be assumed
+#... -> the files to operate on
+#return:
+#the files with undeletables supressed
+#a $supressed_undeletables variables where are all undeletables
+#NOTE: if atomic the output will stop when the first undeletable appear including that undeletable
+function supress_undeletables {
+    is_atomic=$1
+    shift 1
+
+    output=()
+    supressed_undeletables=()
+    for f in $@; do
+        if is_undeletable $f; then
+            supressed_undeletables+=($f)
+            [ "$is_atomic" = t ] && return 0
+        else
+            output+=($f)
+        fi
+    done
+
+    echo ${output[@]}
+}
+
+#Defaults parameters
+ppretty=f #use color or no in inputs
+pforce=f #force deletion of undeletables
+psilent=f #do not output anything
+patomic=f #atomic operation
+pdelete=f #only delete and do not clean
+
+
+TEMP=$(getopt hpsfacd "$@")
+
+[ "$?" -ne 0 ] && exit 1 #if there was an error in the arguments
+
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+    case $1 in
+        -h)
+            echo_usage
+            exit 0;;
+        -p)
+            ppretty=t
+            shift
+            continue;;
+        -s)
+            psilent=t
+            shift
+            continue;;
+        -f)
+            pforce=t
+            shift
+            continue;;
+        -a)
+            patomic=t
+            shift
+            continue;;
+        --)
+            shift
+            break;;
+        *)
+            echo "error parsing args" >&2
+            exit 1;;
+    esac
+done
+
+
+fecho=echo
+[ "$psilent" = t ] && fecho=echon
+
+fechow=echo
+[ "$ppretty" = t ] && fechow=echow
+[ "$psilent" = t ] && fechow=echon
+
+
+#if is force simple delete all without asking
+if [ "$pforce" = t ]; then
+    sow_trash $@
+    exit $?
+fi
+
+
+files2delete=($(supress_undeletables $patomic $@))
+
+#warn every undeletable file if exists
+for undel_file in $undeletable_files; do
+    $fechow "[$undel_file] is undeletable"
+done
+
+#if atomic and there are undeletables files cancel everything
+if [ "$patomic" = t ] && [ "${#supressed_undeletables[@]}" -gt 0 ]; then
+    $fecho -e "\ndeletion operation cancelled for atomicity"
+    exit 1
+fi
+
+#delete all files2delete
+$fecho -e "\n---delete start---"
+sow_trash $files2delete
+exit $?
