@@ -1,7 +1,7 @@
 {
     "spacing": 5,
     "modules-center": ["clock"],
-    "modules-right": ["custom/my_rmd", "pulseaudio"],
+    "modules-right": ["custom/my_rmd", "pulseaudio", "battery"],
 
     "clock": {
         "format": "{:%I:%M %p}"
@@ -17,5 +17,8 @@
         "format-bluetooth": "vol: {volume}% b",
         "format-muted": "vol: {volume}% m",
         "scroll-step": 1
+    },
+    "battery": {
+        "format": "bat: {capacity}%"
     }
 }
