@@ -1,13 +1,15 @@
 #waybar {
-    font-size: 14px;
+    font-size: 13px;
     background-color: transparent;
 }
 
 label {
     font-weight: bold;
-
+    
     padding: 2px 8px;
-    border-radius: 20px;
 
     background-color: rgba(235, 221, 168, 0.8);
+    background-color: #595959;
+
+    color: white;
 }
