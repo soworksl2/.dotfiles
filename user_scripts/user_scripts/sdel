@@ -1,0 +1,361 @@
+#!/bin/bash
+
+# a wrapper to some trash-cli implementation to automate some trash-clean tasks and add extra features
+
+
+UNDELETABLES=(
+    $HOME/Downloads
+    $HOME/documents
+    $HOME/images
+    $HOME/.config
+    $HOME/.dotconfig
+    $HOME/Videos
+    $HOME/user_scripts
+    $HOME/UNDELTEST
+)
+
+# options autoclean
+O_AUTO_TRIGGER=t #trigger automatically when invoke this script
+O_MAX_FILE_TIME=28 #the days that the file can be in the trash before be cleaned
+
+# Enums
+
+#INTERACTIVE ANSWERS
+I_YES=1
+I_NO=2
+I_AN=3 #All Next
+I_NM=4 #No More
+I_AB=5 #Abort
+
+#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+# Functions
+#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+function print_usage {
+    echo "usage: sdel [OPTION]... {ITEM}..."
+    echo "help: sdel -h|--help"
+}
+
+function print_help {
+    print_usage
+    echo ""
+    echo "OPTIONS:"
+    echo -e "-h|--help\n\t\tshow a help message"
+    echo -e "-f|--force\n\t\tdelete undeletables item without ask"
+    echo -e "-i|--interactive\n\t\task for delete undeletables items instead of ask"
+    echo -e "--clean\n\t\tforce clean the trash"
+    echo -e "--no-clean\n\t\tforce do not clean the trash"
+}
+
+# check if prog exists, if it does not exits print a msg and exit
+# $1 prog to check
+# $2 msg [Optional] if not set has default msg
+function require_prog {
+    #if prog exists just return ok
+    if command -V "$1" &> /dev/null; then
+        return 0
+    fi
+
+    if [ -z "$2" ]; then
+        # need default msg
+        local msg="the prog '$1' is required and not installed"
+    else
+        local msg="$2"
+    fi
+
+    echo "$msg"
+    exit 1
+}
+
+# check if the item is undeletable and set the status code to 0, 1 otherwise
+# $1 item to check
+function is_undeletable {
+    local item=$(realpath "$1")
+
+    for u in ${UNDELETABLES[@]}; do
+        if [ "$u" = "$item" ]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+# ask the user if he wants to delete an item
+# $1 the item to ask for deletion
+# the return is the status code $?
+function ask_for_delete {
+    local ans=
+
+    while true; do
+        read -p "do you want to delete the undeletable item '$1'? (y|n|an|nm|abort|help)" ans
+
+        case $ans in
+            y|yes)
+                return $I_YES
+            ;;
+            n|no)
+                return $I_NO
+            ;;
+            an|allnext)
+                return $I_AN
+            ;;
+            nm|nomore)
+                return $I_NM
+            ;;
+            abort|ab)
+                return $I_AB
+            ;;
+            *)
+                echo ""
+                echo "help:"
+                echo -e " y|yes\tmark the item for delete"
+                echo -e " n|no\tdo not mark the item for delete"
+                echo -e " an|allnext\tmark all subsequents item for deletion"
+                echo -e " nm|nomore\tskip all undeletables items and not delete them"
+                echo -e " abort\tabort everything and do nothing"
+                echo ""
+            ;;
+        esac
+    done
+}
+
+# if an item is undeletable ask to the user if really delete it or not
+# $1 the name of the output array variable
+# $@ all items deletables and undeletables to filter
+function filter_items_interactively {
+    local -n output=$1
+    local skip=
+
+    shift
+
+    output=()
+    
+    for i in "$@"; do
+        if ! is_undeletable $i; then
+            output+=( "$i" )
+            continue
+        fi
+        
+        #check skips flags
+        case $skip in
+            delall)
+                output+=( "$i" )
+                continue
+            ;;
+            nodelmore)
+                continue
+            ;;
+        esac
+
+        # here the item is undeletable
+        ask_for_delete "$i"
+        delans="$?"
+
+        if [ "$delans" -eq "$I_YES" ]; then
+            output+=( "$i" )
+            continue
+        elif [ "$delans" -eq "$I_NO" ]; then
+            continue
+        elif [ "$delans" -eq "$I_AN" ]; then
+            output+=( "$i" )
+            skip=delall
+            continue
+        elif [ "$delans" -eq "$I_NM" ]; then
+            skip=nodelmore
+            continue
+        elif [ "$delans" -eq "$I_AB" ]; then
+            output=()
+            return
+        else
+            output=()
+            echo "A fatal and Unknown error ocurred"
+            return 1
+        fi
+
+    done
+}
+
+# returns all undeletables files from a specified arrays
+# $1 output name ref where the undeletables will go
+# $@ all the items to find in
+function get_undeletables_from {
+    local -n output="$1"
+    output=()
+
+    shift
+
+    for i in "$@"; do
+        if is_undeletable "$i"; then
+            output+=( "$i" )
+        fi
+    done
+}
+
+# get all necessary items to be deleted depending of the mode
+# $1 output array variable name
+# $2 mode normal|mode|interactive
+function get_items2del_by_mode {
+    local -n output="$1"
+    local delmode="$2"
+
+    shift 2
+
+    case "$delmode" in
+        force)
+            output=( "$@" ) #mark everything to delete
+        ;;
+        interactive)
+            filtered_items=()
+            filter_items_interactively filtered_items "$@"
+            output=( "${filtered_items[@]}" )
+        ;;
+        normal)
+            undeletables2del=()
+            get_undeletables_from undeletables2del "$@"
+            
+            if [ "${#undeletables2del[@]}" -le 0 ]; then
+                #if there are no undeletables items
+                output=( "$@" )
+            else
+                echo "ERROR: you are trying to delete undeletables items (use -i or -f if you want really delete them)"
+                echo ""
+                echo "UNDELETABLES: "
+
+                for i in "$undeletables2del"; do
+                    echo "  - '$i'"
+                done
+
+                echo ""
+
+                output=()
+            fi
+        ;;
+    esac
+}
+
+# indicate if it is necessary to clean the trash
+# $1 the default clean trash state
+# $2 the mdode to indicate if use the default or force or no a clean (default|clean|noclean)
+function need_clean_trash {
+    local default="$1"
+    local mode="$2"
+
+    case "$mode" in
+        default)
+            if [ "$default" = t ]; then return 0; else return 1; fi
+        ;;
+        clean)
+            return 0
+        ;;
+        noclean)
+            return 1
+        ;;
+    esac
+}
+
+# execute trash with all the items to delete
+# $@ items to delete
+function exec_trash {
+    [ $# -le 0 ] || trash --verbose "$@"
+}
+
+# clean the trash
+# $1 the number of days that a file can be held by the trash
+function exec_clean {
+    local days_in_trash="$1"
+
+    trash-empty -f "$days_in_trash"
+}
+
+
+#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+# Check apps availability
+#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+#check for trash from trash-cli
+require_prog trash "trash-cli is required and it is not installed"
+
+
+#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+
+TEMP=$(getopt -o "hfi" -l "help,force,interactive,clean,no-clean" -- $@)
+
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "error parsing arguments"
+    echo ""
+    print_usage
+    exit 1
+fi
+
+eval set -- "$TEMP"
+unset TEMP
+
+delmode=normal
+clean_trash_mode=default
+
+fi_mutual_exclusive_err="ERROR: --force and --interactive are mutual exclusive"
+
+while true; do
+    case $1 in
+        -h|--help)
+            print_help
+            exit 0
+        ;;
+        -f|--force)
+            if [ "$delmode" = "interactive" ]; then
+                echo "$fi_mutual_exclusive_err"
+                exit 1
+            fi
+            delmode=force
+            shift
+            continue
+        ;;
+        -i|--interactive)
+            if [ "$delmode" = "force" ]; then
+                echo $fi_mutual_exclusive_err
+                exit 1
+            fi
+            delmode=interactive
+            shift
+            continue
+        ;;
+        --clean)
+            clean_trash_mode=clean
+            shift
+            continue
+        ;;
+        --no-clean)
+            clean_trash_mode=noclean
+            shift
+            continue
+        ;;
+        --)
+            shift
+            break
+        ;;
+    esac
+done
+
+
+items2del=
+get_items2del_by_mode items2del "$delmode" "$@"
+
+echo "Deleting files..."
+echo ""
+
+if [ ${#items2del[@]} -eq 0 ]; then
+    echo "nothing was deleted"
+else
+    exec_trash "${items2del[@]}"
+fi
+
+
+if need_clean_trash "$O_AUTO_TRIGGER" "$clean_trash_mode"; then
+    echo ""
+    echo "Cleaning trash upto $O_MAX_FILE_TIME days..."
+    echo ""
+    exec_clean "$O_MAX_FILE_TIME"
+fi
