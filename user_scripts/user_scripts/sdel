@@ -280,7 +280,7 @@ require_prog trash "trash-cli is required and it is not installed"
 #-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
 
 
-TEMP=$(getopt -o "hfi" -l "help,force,interactive,clean,no-clean" -- $@)
+TEMP=$(getopt -o "hfi" -l "help,force,interactive,clean,no-clean" -- "$@")
 
 if [ $? -ne 0 ]; then
     echo ""
