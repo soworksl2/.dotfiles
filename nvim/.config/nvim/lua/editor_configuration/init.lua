@@ -29,3 +29,5 @@ o.relativenumber = true
 
 require('editor_configuration.global_commands')
 require('editor_configuration.global_keymaps')
+
+require('editor_configuration.functionalities')
