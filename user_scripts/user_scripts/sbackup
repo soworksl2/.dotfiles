@@ -1,0 +1,157 @@
+#!/bin/bash
+
+BACKUP_FRECUENCY=2 #the backup is made each two days.
+
+BACKUP_DIR_MAIN="$HOME/.sbackup"
+BACKUP_DIR="$BACKUP_DIR_MAIN/bk"
+BACKUP_DIR2="${BACKUP_DIR}2"
+BACKUP_CONFIG_FILE="$BACKUP_DIR_MAIN/.sbackup.csv"
+DEST_SYNC_DIR="drive:sbackup"
+
+
+#Struct BackupItem {
+#   1 - item_abs_path
+#   2 - need_compression
+#   3 - backup_name
+#}
+
+
+#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+# Checking commands
+#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+#check for a cmd or exit with an error message
+#$1 the cmd for check
+function check_cmd {
+    if ! command -V "$1" &> /dev/null; then
+        echo "ERROR: the command '$1' was not found" >&2
+        exit 1
+    fi
+}
+
+check_cmd rclone
+check_cmd tar
+check_cmd gzip
+
+#check rclone google-drive availability
+
+
+#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
+
+#return all the items that need to be back up
+#$1 - the var nameref that will receive the array
+function get_backup_items {
+    local -n arroutput="$1"
+    arroutput=()
+
+    #if the config file does not exists, simple return no backup items
+    if [ ! -f "$BACKUP_CONFIG_FILE" ]; then
+        return 0
+    fi
+
+    while IFS= read -r line; do
+        arroutput+=("$line")
+    done < "$BACKUP_CONFIG_FILE"
+    
+}
+
+#realize a backup without compression just cp
+#$1 - path
+#$2 - name
+function do_simple_backup {
+    cp "$1" "$BACKUP_DIR/$2" -r
+    return $?
+}
+
+#do the backup for a file specifically
+#$1 - the path to the file
+#$3 - the name that the bk file will have
+function do_backup_file {
+    gzip -c --best "$1" > "$BACKUP_DIR/${2}.gz"
+    return $?
+}
+
+function do_backup_dir {
+    output_tar="$BACKUP_DIR/${2}.tar"
+    tar -cC "$1" -f "$output_tar" .
+    gzip --best "$output_tar"
+    return $?
+}
+
+#realize the backup for an item
+#$1 - the backup item line
+function do_backup {
+    IFS=';' read -r bk_path need_compress name <<< "$1"
+
+    eval "bk_path=\"$bk_path\""
+    name="${name:-$(basename "$bk_path")}"
+
+    echo -n "backing up '$bk_path' into '$name' - "
+
+    if test ! -e "$bk_path"; then
+        echo "FAILED(item does not exists)"
+        return 1
+    fi
+
+    if test ! $need_compress = 'true'; then
+        do_simple_backup "$bk_path" "$name"
+        st=$?
+
+        if test "$st" -eq 0; then
+            echo "OK"
+        else
+            echo "FAILED"
+        fi
+
+        return $st
+    fi
+
+    if test -f "$bk_path"; then
+        do_backup_file "$bk_path" "$name"
+    else
+        do_backup_dir "$bk_path" "$name"
+    fi
+
+    bk_status_code=$?
+
+    if test $bk_status_code -eq 0; then
+        echo "OK"
+    else
+        echo "FAILED"
+    fi
+
+    return $?
+}
+
+#create necessary directories if necessary
+mkdir "$BACKUP_DIR_MAIN" &> /dev/null
+mkdir "$BACKUP_DIR" &> /dev/null
+
+#clean current bk and bk2 and prepare
+rm "$BACKUP_DIR2" -r
+mv "$BACKUP_DIR" "$BACKUP_DIR2"
+mkdir "$BACKUP_DIR" &> /dev/null
+
+#do backup
+#---------
+backup_items=()
+get_backup_items backup_items
+
+for bk_item in "${backup_items[@]}"; do
+    do_backup "$bk_item"
+done
+
+echo "----------SYNCYING----------"
+
+#sync with cloud
+rclone sync "$BACKUP_DIR" "$DEST_SYNC_DIR"
+
+st_code=$?
+
+echo ""
+
+if test "$st_code" -eq 0; then
+    echo "- sync ok"
+else
+    echo "- sync failed"
+fi
