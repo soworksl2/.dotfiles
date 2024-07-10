@@ -1,0 +1,10 @@
+SRM_UNDELETABLES=(
+    "$HOME/Downloads"
+    "$HOME/documents"
+    "$HOME/images"
+    "$HOME/.config"
+    "$HOME/.dotconfig"
+    "$HOME/Videos"
+    "$HOME/user_scripts"
+    "$HOME/UNDELTEST"
+)

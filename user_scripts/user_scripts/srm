@@ -1,0 +1,66 @@
+#!/bin/sh
+
+SRM_UNDELETABLES=() #Init the UNDELETABLES items just in case the config file is not sourced it.
+if test -e "$HOME/.config/user_scripts/srm.sh"; then
+    source "$HOME/.config/user_scripts/srm.sh"
+fi
+
+function ensure_undeletables {
+    files2del=("$@")
+
+    is_error=False
+    for undel in "${SRM_UNDELETABLES[@]}"; do
+        for f2d in "${files2del[@]}"; do
+            f2d_real="$(realpath "$f2d")"
+
+            if test "$undel" == "$f2d_real"; then
+                echo "ERROR: '$f2d_real' is an undeletable item" >&2
+                is_error=True
+            fi
+        done
+    done
+
+    if test "$is_error" == "True"; then
+        exit 1
+    fi
+}
+
+
+plain_args=("$@")
+TEMP=$(getopt -o "hdfirRv" -l "help,directory,force,interactive,recursive,verbose,version" -- "$@")
+
+if test "$?" -ne "0"; then
+    echo "error parsing arguments"
+    exit 1
+fi
+
+eval set -- "$TEMP"
+unset TEMP
+
+while true; do
+    case "$1" in
+        "-h"|"--help")
+            echo "options the same as rm (use \\rm -h).\n"
+            echo "to add UNDELETABLES items write them in $HOME/.config/usr_scripts/srm.sh in an array called SRM_UNDELETABLES"
+            echo "to delete undeletables items use (\\rm) instead"
+            exit 0
+        ;;
+        "--version")
+            echo "using trashcli as backend"
+            trash --version
+            exit 0
+        ;;
+        "--")
+            shift
+            break
+        ;;
+        *)
+            shift
+        ;;
+    esac
+done
+
+
+ensure_undeletables "$@"
+
+trash "${plain_args[@]}"
