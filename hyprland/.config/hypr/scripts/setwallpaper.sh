@@ -13,7 +13,7 @@ function randran {
 
 
 #require swaybg
-if [ ! $(command -v swaybg) ]; then
+if ! command -v swaybg &> /dev/null; then
     hyprwarn 30000 "swaybg is not installed"
     exit 1
 fi
@@ -25,9 +25,21 @@ if [ ! -d "$wallpapers_dir" ]; then
     exit 1
 fi
 
+#close the last swaybg if it is already running
+swaybg_pid_temp="$(ps -C swaybg)"
+is_swaybg_active="$?"
+if test "${is_swaybg_active}" -eq 0; then
+    kill "$(awk 'NR==2 {print $1}' <<< "${swaybg_pid_temp}")" &> /dev/null
+fi
+
 
 all_wallpapers=( $(ls "$HOME/images/wallpapers/") )
 wallpapers_count=${#all_wallpapers[@]}
 
+if test "${wallpapers_count}" -le "0"; then
+    hyprwarn 10000 "there are no wallpapers to set in the wallpapers directory"
+    exit 1
+fi
+
 rand_selection=$(($(randran 0 $wallpapers_count)-1))
-swaybg -m fill -i "${wallpapers_dir}/${all_wallpapers[$rand_selection]}"
+swaybg -m fill -i "${wallpapers_dir}/${all_wallpapers[$rand_selection]}" &> /dev/null &
