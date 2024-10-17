@@ -14,3 +14,4 @@ export VISUAL="nvim"
 #Aliases
 alias ls='ls --color'
 alias rm="$HOME/user_scripts/srm"
+alias vim='nvim'
