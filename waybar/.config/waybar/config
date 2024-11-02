@@ -1,9 +1,5 @@
 {
     "spacing": 5,
-    "margin-top": 2,
-    "margin-bottom": -2,
-    "margin-right": 6,
-    "margin-left": 6,
     "modules-center": ["clock"],
     "modules-right": ["custom/my_rmd", "pulseaudio", "battery"],
 
@@ -17,12 +13,12 @@
     },
 
     "pulseaudio": {
-        "format": "vol: {volume}%",
+        "format": "vol:{volume}%",
         "format-bluetooth": "vol: {volume}% b",
         "format-muted": "vol: {volume}% m",
         "scroll-step": 1
     },
     "battery": {
-        "format": "bat: {capacity}%"
+        "format": "bat:{capacity}%"
     }
 }
