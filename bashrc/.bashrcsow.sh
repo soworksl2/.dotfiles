@@ -2,10 +2,6 @@
 PS1="\n[\w]\n[\u]--> "
 
 
-#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-# Variables
-#-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*
-
 #Editors
 export EDITOR="nvim"
 export VISUAL="nvim"
