@@ -5,6 +5,6 @@ SRM_UNDELETABLES=(
     "$HOME/.config"
     "$HOME/.dotconfig"
     "$HOME/Videos"
-    "$HOME/user_scripts"
+    "${XDG_HOME_BIN}"
     "$HOME/UNDELTEST"
 )

@@ -15,5 +15,5 @@ export VISUAL="nvim"
 #Aliases
 alias mv='mv --interactive'
 alias ls='ls --color'
-alias rm="$HOME/user_scripts/srm"
+alias rm="$XDG_BIN_HOME/srm"
 alias vim='nvim'
