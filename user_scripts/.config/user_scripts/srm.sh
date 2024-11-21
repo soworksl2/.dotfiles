@@ -1,4 +1,5 @@
 SRM_UNDELETABLES=(
+    "$HOME"
     "$HOME/Downloads"
     "$HOME/documents"
     "$HOME/images"
@@ -6,5 +7,6 @@ SRM_UNDELETABLES=(
     "$HOME/.dotconfig"
     "$HOME/Videos"
     "${XDG_HOME_BIN}"
+    "$HOME/.local"
     "$HOME/UNDELTEST"
 )
