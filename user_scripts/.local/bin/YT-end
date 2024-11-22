@@ -10,6 +10,47 @@ VIDEO_PATH = './video.mp4'
 META_FILE = './meta.toml'
 
 
+class TimeChapter:
+    def __init__(self, h, m, s, chapter):
+        assert h <= 9, 'hours cannot be greater than 9'
+        assert m <= 59, 'minutes cannot be greater than 59'
+        assert s <= 59, 'seconds cannot be greater than 59'
+        self.h = h
+        self.m = m
+        self.s = s
+        self.chapter = chapter
+
+    @staticmethod
+    def from_str(chapter_str):
+        time_part_str, chapter_part = chapter_str.split(' ', 1)
+
+        if not chapter_part:
+            raise Exception(f'invalid chapter "{chapter_str}"')
+
+        time_parts = time_part_str.split(':')
+        time_parts_len = len(time_parts)
+
+        if time_parts_len < 2 or time_parts_len > 3:
+            raise Exception(f'invalid chapter "{chapter_str}"')
+
+        if time_parts_len == 2:
+            time_parts.insert(0, '0')
+        time_parts = list(map(lambda p: int(p), time_parts))
+
+        h, m, s = time_parts
+        return TimeChapter(h,m,s,chapter_part)
+
+    def serialize_with_yt_format(self, as_larger_fmt = False):
+        if self.h > 0 and not as_larger_fmt:
+            raise Exception('a TimeChapter with more than 1 hour should be serialize as Larger Format')
+
+        serialize = ''
+        if as_larger_fmt:
+            serialize += f'{self.h}:'
+        serialize += f'{self.m:02}:{self.s:02} {self.chapter}'
+        return serialize
+
+
 def _push2clipboard(v):
     process = subprocess.Popen(['wl-copy'], stdin=subprocess.PIPE)
     process.communicate(input=v.encode())
@@ -69,9 +110,21 @@ def _generate_youtube_time_content(meta):
     if len(contents) <= 0:
         return ''
     
-    content_desc = 'Contenido:\n\n00:00 Empezamos\n'
-    for content in contents:
-        content_desc += content + '\n'
+    content_desc = '-+-+[Capitulos]+-+-\n'
+    chapters = list(map(lambda c: TimeChapter.from_str(c), contents))
+    chapters.insert(0, TimeChapter(0, 0, 0, 'Empezamos')) #add the first time at 0:00:00
+    is_larger = False
+
+    #first iteration to verify if has some chapter larger than 1 hour
+    for chapter in chapters:
+        if chapter.h > 0:
+            is_larger = True
+            break
+
+    for chapter in chapters:
+        chap_str = chapter.serialize_with_yt_format(is_larger)
+        content_desc += f'{chap_str}\n'
+
     return content_desc
 
 def _generate_youtube_social_media_desc():
