@@ -97,6 +97,7 @@ def _generate_youtube_content(meta):
     if desc:
         desc += '\n\n'
 
+    desc += '-+-+[Esta descripción es generada automaticamente para SEO]+-+-\n\n'
     desc += chatgpt_main_desc
     desc += '\n\nEspero que disfrutes este contenido en Español!'
 
