@@ -22,6 +22,8 @@ def _create_meta_file(project_path):
     with open(meta_path, 'w') as f:
         f.write('desc=""\n')
         f.write('actions=[]\n')
+        f.write('resources=[]\n')
+        f.write('contents=[]\n')
 
 def _create_and_initiate_motions(project_path):
     motions_path = os.path.join(project_path, 'motions')
@@ -31,7 +33,7 @@ def _create_and_initiate_motions(project_path):
 
 
 if __name__ == '__main__':
-    _ensure_prog('npm')
+    #_ensure_prog('npm') TODO: is not necessary yet
 
     if len(sys.argv) < 2:
         print('you need to specify the video_project_name', file=sys.stderr)
