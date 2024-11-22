@@ -1,0 +1,125 @@
+#!/bin/python
+
+import os
+import sys
+import tomllib
+import subprocess
+
+
+VIDEO_PATH = './video.mp4'
+META_FILE = './meta.toml'
+
+
+def _push2clipboard(v):
+    process = subprocess.Popen(['wl-copy'], stdin=subprocess.PIPE)
+    process.communicate(input=v.encode())
+
+def _get_clipboard():
+    process_result = subprocess.run(['wl-paste'], capture_output=True)
+    return process_result.stdout.decode()
+
+def _ensure_file(file):
+    is_file = os.path.isfile(file)
+    if not is_file:
+        print(f'the file "{file}" does not exists', file=sys.stderr)
+        sys.exit(1)
+
+def _parse_meta(file):
+    with open(file, 'rb') as f:
+        return tomllib.load(f)
+
+def _generate_chatgpt_youtube_prompt(meta):
+    desc=meta['desc']
+    actions=meta.get('actions', [])
+    chatgpt_desc_prompt=f"""Tengo la siguiente descripcion para mi video de youtube:
+
+\"{desc}\"
+
+Genera una mejor version, mas amplia, mas atractiva y que este optimizada para SEO para hacer el video mas facil de encontrar, la descripcion debe de ser formal solo que explique bien de que va a ir el video utilizando estrategicamente palabras claves para mejorar el SEO y llamar la atencion. No agregues nada extra aparte de la descripcion del video como por ejemplo algun mensaje para decirle a la audiecia que se suscriban.
+
+La descripcion no puede contener formato ya que youtube no lo permite, asi que no negritas, no italica ni ningun formato solo el texto. Se lo mas verbose que puedas sin saturar el texto."""
+
+    if len(actions) > 0:
+        chatgpt_desc_prompt+=f'\n\nPara tener mas contexto lo que se realizo en el video fue:\n'
+        for action in actions:
+            chatgpt_desc_prompt+=f'\n    - {action}'
+
+    return chatgpt_desc_prompt
+
+def _generate_youtube_main_desc(meta):
+    chatgpt_prompt = _generate_chatgpt_youtube_prompt(meta)
+
+    _push2clipboard(chatgpt_prompt)
+    input('A CHATGPT prompt was copied in your clipboard. paste it in chatgpt and copy its answer. then press enter...')
+    chatgpt_desc = _get_clipboard()
+    print('answer received succesfully!\n')
+    return chatgpt_desc
+
+def _generate_youtube_resources_desc(meta):
+    resources = meta.get('resources', [])
+
+    resource_desc = ''
+    for resource in resources:
+        resource_desc += resource + '\n'
+    return resource_desc.strip()
+
+def _generate_youtube_time_content(meta):
+    contents = meta.get('contents', [])
+    
+    if len(contents) <= 0:
+        return ''
+    
+    content_desc = 'Contenido:\n\n00:00 Empezamos\n'
+    for content in contents:
+        content_desc += content + '\n'
+    return content_desc
+
+def _generate_youtube_social_media_desc():
+    social_media_desc = """Redes Sociales:
+
+  Linkedin: https://www.linkedin.com/in/jimy-aguasviva-781b32200/
+X(Twitter): https://x.com/soworksl
+    Github: https://github.com/soworksl2"""
+    return social_media_desc
+
+def _generate_youtube_tags():
+    chatgpt_prompt = 'Ahora con este mismo contexto, genera algunos tags para el video de youtube cada uno separado por comas en una sola linea.'
+    _push2clipboard(chatgpt_prompt)
+    input('se copio un nuevo prompt para chatgpt. pegalo en el mismo chat y cuando copies la respuesta presiona enter.')
+    tags = _get_clipboard()
+    print('se recibio la respuesta correctamente')
+    return tags
+
+def _generate_youtube_content(meta):
+    desc = _generate_youtube_resources_desc(meta)
+    chatgpt_main_desc = _generate_youtube_main_desc(meta)
+
+    if desc:
+        desc += '\n\n'
+
+    desc += chatgpt_main_desc
+    desc += '\n\nEspero que disfrutes este contenido en Español!'
+
+    video_content = _generate_youtube_time_content(meta)
+    if video_content:
+        desc += '\n\n' + video_content
+
+    social_media_desc = _generate_youtube_social_media_desc()
+    desc += '\n\n' + social_media_desc
+
+    desc += '\n\n-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*\n\n'
+
+    tags = _generate_youtube_tags()
+
+    desc += tags
+
+    with open('./youtube_help.txt', 'w') as f:
+        f.write(desc)
+
+if __name__ == '__main__':
+    _ensure_file(VIDEO_PATH)
+    _ensure_file(META_FILE)
+
+    meta_info = _parse_meta(META_FILE)
+
+    _generate_youtube_content(meta_info)

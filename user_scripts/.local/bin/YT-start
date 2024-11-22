@@ -1,0 +1,51 @@
+#!/bin/python
+
+import sys
+import os
+import shutil
+import subprocess
+
+
+VIDEO_DIR = os.path.join(os.environ['HOME'], 'Videos')
+VIDEO_PRODUCTION_DIRNAME = 'video_production'
+VIDEO_PRODUCTION_DIR = os.path.join(VIDEO_DIR, VIDEO_PRODUCTION_DIRNAME)
+
+
+def _ensure_prog(prog):
+    prog_path = shutil.which(prog)
+    if not prog_path:
+        print(f'"{prog}" is necessary to execute this script', file=sys.stderr)
+        sys.exit(1)
+
+def _create_meta_file(project_path):
+    meta_path = os.path.join(project_path, 'meta.toml')
+    with open(meta_path, 'w') as f:
+        f.write('desc=""\n')
+        f.write('actions=[]\n')
+
+def _create_and_initiate_motions(project_path):
+    motions_path = os.path.join(project_path, 'motions')
+    os.mkdir(motions_path)
+    #Cannot initiate the motion canvas because npm make it complex
+    # Or if we just copy paste package.json then the dependency could not be the latest
+
+
+if __name__ == '__main__':
+    _ensure_prog('npm')
+
+    if len(sys.argv) < 2:
+        print('you need to specify the video_project_name', file=sys.stderr)
+        sys.exit(1)
+
+    video_project_name = sys.argv[1]
+    video_project_path = os.path.join(VIDEO_PRODUCTION_DIR, video_project_name)
+
+    if os.path.exists(video_project_path):
+        print(f'{video_project_name} already exists', file=sys.stderr)
+        sys.exit(1)
+
+
+    os.mkdir(video_project_path)
+    _create_meta_file(video_project_path)
+    os.mkdir(os.path.join(video_project_path, 'videos'))
+    _create_and_initiate_motions(video_project_path)
