@@ -1,6 +1,6 @@
 SRM_UNDELETABLES=(
     "$HOME"
-    "$HOME/Downloads"
+    "$HOME/downloads"
     "$HOME/documents"
     "$HOME/images"
     "$HOME/.config"
