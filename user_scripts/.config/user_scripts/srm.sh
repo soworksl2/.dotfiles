@@ -4,10 +4,10 @@ SRM_UNDELETABLES=(
     "$HOME/documents"
     "$HOME/images"
     "$HOME/dev"
+    "$HOME/Videos"
     "$HOME/.config"
     "$HOME/.dotconfig"
-    "$HOME/Videos"
-    "${XDG_HOME_BIN}"
     "$HOME/.local"
+    "${XDG_HOME_BIN}"
     "$HOME/UNDELTEST"
 )
