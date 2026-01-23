@@ -1,5 +1,11 @@
 local boilerplate = require('boilerplate_code')
 
+-- Disabling arrows keys
+vim.keymap.set({'n', 'i'}, '<Left>', '<nop>')
+vim.keymap.set({'n', 'i'}, '<Up>', '<nop>')
+vim.keymap.set({'n', 'i'}, '<Right>', '<nop>')
+vim.keymap.set({'n', 'i'}, '<Down>', '<nop>')
+
 --*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
 -- Utils spanish keymaps
 --*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-
