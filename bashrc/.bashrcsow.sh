@@ -17,3 +17,4 @@ alias mv='mv --interactive'
 alias ls='ls --color=auto'
 alias rm="$XDG_BIN_HOME/srm"
 alias vim='nvim'
+alias ssh='TERM="xterm-256color" ssh'
