@@ -26,6 +26,10 @@ o.autoindent = true
 o.number = true
 o.relativenumber = true
 
+-- set wrap lines
+o.showbreak = '+>'
+
+o.colorcolumn = '80,110'
 
 require('editor_configuration.global_commands')
 require('editor_configuration.global_keymaps')
